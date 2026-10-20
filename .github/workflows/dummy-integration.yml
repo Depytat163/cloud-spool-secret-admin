@@ -1,0 +1,36 @@
+name: Dummy Secret Integration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fixed-china-dummy-secret-integration
+  cancel-in-progress: false
+jobs:
+  dummy:
+    if: github.ref == 'refs/heads/main'
+    environment: secret-administration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned encryption dependency without credentials in process environment
+        run: python3 -m pip install --disable-pip-version-check 'PyNaCl==1.6.2'
+      - name: Offline crypto and fail-closed tests before token mint
+        run: python3 -m unittest -v test_security test_crypto
+      - name: Mint only China Secrets token
+        id: app
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: '5399991'
+          private-key: ${{ secrets.ADMIN_APP_PRIVATE_KEY }}
+          owner: Depytat163
+          repositories: China-Logistics-Simulation
+          permission-secrets: write
+          permission-metadata: read
+      - name: Actual dummy encrypted PUT and cleanup (no Google values)
+        env:
+          ADMIN_INSTALLATION_TOKEN: ${{ steps.app.outputs.token }}
+        run: python3 dummy_integration.py
