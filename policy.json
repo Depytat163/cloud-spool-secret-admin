@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "state": "SECURITY_PREFLIGHT_PENDING",
+  "control_repository": "Depytat163/cloud-spool-secret-admin",
+  "action": "bind-existing-set",
+  "credential_set": "existing-google-drive",
+  "secret_names": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN"],
+  "request_fields": ["operation_id", "target_repository_id", "target_repository", "action", "credential_set", "credential_version"],
+  "allow_plaintext_input": false,
+  "allow_arbitrary_names": false,
+  "allow_arbitrary_urls": false,
+  "allow_production_values_before_security_suite": false,
+  "unknown_action": "STOP_WRITES_CHECKPOINT_READ_ONLY_RECONCILE",
+  "three_secret_transaction_atomic": false
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {"repository_id": 1419047642, "repository": "Depytat163/China-Logistics-Simulation", "stage": "FIRST_PRODUCTION_TARGET_AFTER_DUMMY_PASS"},
+    {"repository_id": 1415452372, "repository": "Depytat163/y360-workspace", "stage": "WORKING_SECRETS_DO_NOT_CHANGE_WITHOUT_NEED"},
+    {"repository_id": 1412151538, "repository": "Depytat163/my-projects", "stage": "WORKING_SECRETS_DO_NOT_CHANGE_WITHOUT_NEED"}
+  ],
+  "bootstrap_destination": "Depytat163/cloud-spool-secret-admin",
+  "bootstrap_destination_id": null,
+  "bootstrap_enabled": false,
+  "note": "Resolve newly created control repo immutable ID and approve bootstrap registry entry before any credential replication. Dummy integration fixture must be separately identified before live dummy writes."
+}

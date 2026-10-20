@@ -1,0 +1,8 @@
+{
+  "name": "Cloud Spool Secret Administration",
+  "url": "https://github.com/Depytat163/cloud-spool-secret-admin",
+  "public": false,
+  "hook_attributes": {"active": false},
+  "default_permissions": {"secrets": "write", "metadata": "read"},
+  "default_events": []
+}
