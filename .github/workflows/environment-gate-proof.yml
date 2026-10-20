@@ -1,0 +1,38 @@
+name: Environment Gate Proof
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  outside:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: No environment capability in ordinary job
+        env:
+          CANARY: ${{ secrets.CONTROL_PLANE_TEST_CANARY }}
+        shell: python
+        run: |
+          import os
+          assert not os.environ.get('CANARY'), 'Canary incorrectly available outside environment'
+          print('ORDINARY_JOB_NO_ENVIRONMENT_SECRET_PASS')
+  protected:
+    needs: outside
+    if: github.ref == 'refs/heads/main'
+    environment: secret-administration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Protected job canary (not Google/App credentials)
+        env:
+          CANARY: ${{ secrets.CONTROL_PLANE_TEST_CANARY }}
+        shell: python
+        run: |
+          import os
+          if not os.environ.get('CANARY'):
+              print('CANARY_NOT_PROVISIONED_ENVIRONMENT_ACCESS_NOT_PROVEN')
+              raise SystemExit(1)
+          print('PROTECTED_JOB_ENVIRONMENT_CANARY_PRESENT_PASS')
