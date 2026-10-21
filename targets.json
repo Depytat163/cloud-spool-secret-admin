@@ -6,7 +6,7 @@
     {"repository_id": 1412151538, "repository": "Depytat163/my-projects", "stage": "WORKING_SECRETS_DO_NOT_CHANGE_WITHOUT_NEED"}
   ],
   "bootstrap_destination": "Depytat163/cloud-spool-secret-admin",
-  "bootstrap_destination_id": null,
-  "bootstrap_enabled": false,
-  "note": "Resolve newly created control repo immutable ID and approve bootstrap registry entry before any credential replication. Dummy integration fixture must be separately identified before live dummy writes."
+  "bootstrap_destination_id": 1427369280,
+  "bootstrap_enabled": true,
+  "note": "OWNER approved isolated one-time seed 2026-10-21. Installation control-only before Environments write; revoke distinct temporary key and remove permission before China restoration. Existing working project Secrets remain unchanged."
 }

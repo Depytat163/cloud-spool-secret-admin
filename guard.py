@@ -56,4 +56,23 @@ def lint_bundle(root=ROOT):
     assert 'persist-credentials: false' in admin
     assert 'pull_request_target' not in admin and 'push:' not in admin and 'pull_request:' not in admin
     assert 'secrets.' not in (root / '.github/workflows/security.yml').read_text()
+    binding = (root / '.github/workflows/china-real-binding.yml').read_text()
+    seed = (root / 'y360-central-seed.workflow.yml').read_text()
+    for workflow in (binding, seed):
+        assert 'workflow_dispatch:' in workflow
+        assert 'inputs:' not in workflow
+        assert 'push:' not in workflow and 'pull_request' not in workflow
+        assert "github.ref == 'refs/heads/main' && github.run_attempt == 1" in workflow
+        assert 'persist-credentials: false' in workflow
+        assert 'skip-token-revoke' not in workflow
+        assert 'upload-artifact' not in workflow
+        for action in re.findall(r'uses: ([^\s]+)', workflow):
+            assert re.fullmatch(r'actions/[a-z-]+@[a-f0-9]{40}', action)
+    assert 'environment: secret-administration' in binding
+    assert 'repositories: China-Logistics-Simulation' in binding
+    assert 'permission-secrets: write' in binding and 'permission-environments:' not in binding
+    assert 'repositories: cloud-spool-secret-admin' in seed
+    assert 'permission-environments: write' in seed and 'permission-secrets:' not in seed
+    assert 'secrets.ADMIN_APP_BOOTSTRAP_PRIVATE_KEY' in seed
+    assert 'secrets.ADMIN_APP_PRIVATE_KEY' not in seed
     return True

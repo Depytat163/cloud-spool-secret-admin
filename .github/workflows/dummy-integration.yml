@@ -4,7 +4,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: fixed-china-dummy-secret-integration
+  group: fixed-china-secret-administration
   cancel-in-progress: false
 jobs:
   dummy:

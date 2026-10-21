@@ -16,4 +16,4 @@ jobs:
       - name: Fixed policy, workflow and dummy request tests (no secrets)
         run: |
           python3 -m pip install --disable-pip-version-check 'PyNaCl==1.6.2'
-          python3 -m unittest -v test_security test_crypto
+          python3 -m unittest -v test_security test_crypto test_binding
