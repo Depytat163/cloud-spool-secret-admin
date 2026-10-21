@@ -1,0 +1,41 @@
+name: Central Existing Set Bootstrap
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: one-time-central-existing-set-bootstrap
+  cancel-in-progress: false
+jobs:
+  seed:
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .github/secret-admin-bootstrap
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned encryption dependency before credential release
+        run: python3 -m pip install --disable-pip-version-check 'PyNaCl==1.6.2'
+      - name: Offline fail-closed and crypto tests
+        run: python3 -m unittest -v test_binding test_crypto
+      - name: Mint control-repository-only Environment Secrets token
+        id: app
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: '5399991'
+          private-key: ${{ secrets.ADMIN_APP_BOOTSTRAP_PRIVATE_KEY }}
+          owner: Depytat163
+          repositories: cloud-spool-secret-admin
+          permission-environments: write
+          permission-metadata: read
+      - name: One-time fixed central environment seed
+        env:
+          ADMIN_INSTALLATION_TOKEN: ${{ steps.app.outputs.token }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+        run: python3 central_seed.py

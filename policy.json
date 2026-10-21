@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "state": "SECURITY_PREFLIGHT_PENDING",
+  "state": "DUMMY_PASS_REAL_BINDING_PENDING",
   "control_repository": "Depytat163/cloud-spool-secret-admin",
   "action": "bind-existing-set",
   "credential_set": "existing-google-drive",
