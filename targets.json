@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "targets": [
-    {"repository_id": 1419047642, "repository": "Depytat163/China-Logistics-Simulation", "stage": "FIRST_PRODUCTION_TARGET_AFTER_DUMMY_PASS"},
+    {"repository_id": 1419047642, "repository": "Depytat163/China-Logistics-Simulation", "stage": "ACTIVE_BINDING_AND_FUNCTIONAL_ACCEPTANCE_PASS"},
     {"repository_id": 1415452372, "repository": "Depytat163/y360-workspace", "stage": "WORKING_SECRETS_DO_NOT_CHANGE_WITHOUT_NEED"},
     {"repository_id": 1412151538, "repository": "Depytat163/my-projects", "stage": "WORKING_SECRETS_DO_NOT_CHANGE_WITHOUT_NEED"}
   ],
   "bootstrap_destination": "Depytat163/cloud-spool-secret-admin",
   "bootstrap_destination_id": 1427369280,
-  "bootstrap_enabled": true,
-  "note": "OWNER approved isolated one-time seed 2026-10-21. Installation control-only before Environments write; revoke distinct temporary key and remove permission before China restoration. Existing working project Secrets remain unchanged."
+  "bootstrap_enabled": false,
+  "note": "One-time seed 39537907340 completed; temporary authority/key/copy/source workflow removed. China binding 39538298151 and functional acceptance 39538594045 PASS. Reopening seed requires a new explicit bootstrap window; existing working project Secrets remain unchanged."
 }
