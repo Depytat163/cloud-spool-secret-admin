@@ -1,0 +1,84 @@
+name: OPL Central OAuth Client Identity
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fixed-google-secret-administration
+  cancel-in-progress: false
+jobs:
+  identify:
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
+    environment: secret-administration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compare protected client identities without revealing values
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_CANDIDATES: ${{ secrets.GOOGLE_OAUTH_CLIENT_CANDIDATES }}
+          RUNNER_DEBUG: ${{ runner.debug }}
+        run: |
+          python3 - <<'PY'
+          import hmac
+          import json
+          import os
+          import re
+          
+          ALIASES = {
+              'backup_web': ('Iishka GitHub Backup Web', 'Web application'),
+              'backup_test_2_desktop': ('Iishka GitHub Backup Test 2', 'Desktop'),
+              'backup_desktop': ('Iishka GitHub Backup', 'Desktop'),
+          }
+          CLIENT = re.compile(r'^[A-Za-z0-9_-]+[.]apps[.]googleusercontent[.]com$')
+          
+          def identify(central, raw):
+              if not isinstance(central, str) or not CLIENT.fullmatch(central.strip()):
+                  return {'status': 'CENTRAL_ID_UNAVAILABLE'}
+              try:
+                  pairs = json.loads(raw, object_pairs_hook=list)
+                  if not isinstance(pairs, list) or len(pairs) != 3:
+                      return {'status': 'INVALID_CANDIDATES'}
+                  entries = {}
+                  for pair in pairs:
+                      if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+                          return {'status': 'INVALID_CANDIDATES'}
+                      key, value = pair
+                      if key not in ALIASES or key in entries or not isinstance(value, str):
+                          return {'status': 'INVALID_CANDIDATES'}
+                      value = value.strip()
+                      if len(value) > 256 or not CLIENT.fullmatch(value):
+                          return {'status': 'INVALID_CANDIDATES'}
+                      entries[key] = value
+                  if set(entries) != set(ALIASES):
+                      return {'status': 'INVALID_CANDIDATES'}
+                  if len(set(entries.values())) != 3:
+                      return {'status': 'AMBIGUOUS_CANDIDATES'}
+                  matches = [key for key,value in entries.items()
+                             if hmac.compare_digest(central.strip(), value)]
+                  if not matches:
+                      return {'status': 'NO_CANDIDATE_MATCH'}
+                  label, kind = ALIASES[matches[0]]
+                  return {'status': 'CENTRAL_CLIENT_IDENTIFIED', 'matched_client': label, 'client_type': kind}
+              except Exception:
+                  return {'status': 'INVALID_CANDIDATES'}
+          
+          def main():
+              report = {'operation':'opl-v055-central-client-identity',
+                        'read_only':True, 'secret_values_output':False,
+                        'oauth_requests':0, 'secret_mutations':0}
+              if (os.environ.get('GITHUB_REF') != 'refs/heads/main'
+                  or os.environ.get('GITHUB_EVENT_NAME') != 'workflow_dispatch'
+                  or os.environ.get('GITHUB_RUN_ATTEMPT') != '1'):
+                  report['status'] = 'UNTRUSTED_CONTEXT'
+              elif os.environ.get('RUNNER_DEBUG') == '1':
+                  report['status'] = 'DEBUG_DENIED'
+              else:
+                  report.update(identify(os.environ.get('GOOGLE_CLIENT_ID'),
+                                         os.environ.get('GOOGLE_OAUTH_CLIENT_CANDIDATES', '')))
+              print('OPL_CLIENT_IDENTITY', json.dumps(report, sort_keys=True))
+              return 0 if report['status'] in ('CENTRAL_CLIENT_IDENTIFIED','NO_CANDIDATE_MATCH') else 1
+          
+          if __name__ == '__main__':
+              raise SystemExit(main())
+          PY
