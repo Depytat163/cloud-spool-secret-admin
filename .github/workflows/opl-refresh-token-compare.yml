@@ -1,0 +1,82 @@
+name: OPL Protected Refresh Token Comparison
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fixed-google-secret-administration
+  cancel-in-progress: false
+jobs:
+  compare:
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
+    environment: secret-administration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compare stored token with private known-working reference offline
+        env:
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          GOOGLE_REFRESH_TOKEN_REFERENCE: ${{ secrets.GOOGLE_REFRESH_TOKEN_REFERENCE }}
+          RUNNER_DEBUG: ${{ runner.debug }}
+        run: |
+          python3 - <<'PY'
+          import hmac
+          import json
+          import os
+          import unicodedata
+          
+          def equal(a, b):
+              return hmac.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
+          
+          def flags(value):
+              return {
+                  'outer_whitespace': value != value.strip(),
+                  'line_breaks': '\r' in value or '\n' in value,
+                  'control_characters': any(unicodedata.category(c) == 'Cc' for c in value),
+                  'invisible_format_characters': any(unicodedata.category(c) == 'Cf' for c in value),
+                  'wrapped_in_quotes': len(value) >= 2 and value[0] in ('"', "'") and value[-1] == value[0],
+                  'json_container_shape': value.strip().startswith(('{', '[')),
+              }
+          
+          def compare(stored, reference):
+              if not isinstance(stored, str) or not stored:
+                  return {'status': 'STORED_TOKEN_MISSING'}
+              if not isinstance(reference, str) or not reference:
+                  return {'status': 'REFERENCE_TOKEN_MISSING'}
+              exact = equal(stored, reference)
+              trimmed = stored.strip()
+              unwrapped = trimmed[1:-1] if len(trimmed) >= 2 and trimmed[0] in ('"', "'") and trimmed[-1] == trimmed[0] else trimmed
+              return {
+                  'status': 'TOKEN_MATCH' if exact else 'TOKEN_DIFFERENT',
+                  'exact_equal': exact,
+                  'equal_after_outer_whitespace_removal': equal(stored.strip(), reference.strip()),
+                  'stored_without_wrapping_quotes_equals_reference': equal(unwrapped, reference),
+                  'stored_without_crlf_equals_reference': equal(stored.replace('\r', '').replace('\n', ''), reference),
+                  'stored_format': flags(stored),
+                  'reference_format': flags(reference),
+              }
+          
+          def main():
+              report = {
+                  'operation': 'opl-v055-refresh-token-offline-comparison',
+                  'oauth_requests': 0, 'secret_writes': 0, 'values_output': False,
+                  'hashes_or_fragments_output': False,
+              }
+              if (os.environ.get('GITHUB_REF') != 'refs/heads/main'
+                  or os.environ.get('GITHUB_EVENT_NAME') != 'workflow_dispatch'
+                  or os.environ.get('GITHUB_RUN_ATTEMPT') != '1'):
+                  report['status'] = 'UNTRUSTED_CONTEXT'
+              elif os.environ.get('RUNNER_DEBUG') == '1':
+                  report['status'] = 'DEBUG_DENIED'
+              else:
+                  try:
+                      report.update(compare(os.environ.get('GOOGLE_REFRESH_TOKEN'),
+                                            os.environ.get('GOOGLE_REFRESH_TOKEN_REFERENCE')))
+                  except Exception:
+                      report['status'] = 'COMPARISON_ERROR'
+              print('OPL_TOKEN_COMPARISON', json.dumps(report, sort_keys=True))
+              return 0 if report['status'] in ('TOKEN_MATCH', 'TOKEN_DIFFERENT') else 1
+          
+          if __name__ == '__main__':
+              raise SystemExit(main())
+          PY
