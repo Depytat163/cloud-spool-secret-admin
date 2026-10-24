@@ -1,0 +1,87 @@
+name: OPL v055 Protected Source Preflight
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/opl-v055-source-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: fixed-google-source-preflight
+  cancel-in-progress: false
+jobs:
+  source-readiness:
+    if: github.ref == 'refs/heads/main' && github.run_attempt == 1
+    environment: secret-administration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install pinned OAuth transport
+        run: python3 -m pip install --disable-pip-version-check 'google-auth==2.62.0' 'requests==2.34.2'
+      - name: Check existing protected Google set and fixed frozen source metadata
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          from google.oauth2.credentials import Credentials
+          from google.auth.transport.requests import Request, AuthorizedSession
+          from google.auth.exceptions import RefreshError
+          report = {
+              'operation': 'opl-v055-protected-source-preflight',
+              'read_only': True,
+              'run_id': os.environ['GITHUB_RUN_ID'],
+              'source_file_id': '17oA5t4cQBTt1GsHfVTKHBHDwgKDsjI3j',
+              'expected_size': 5647489,
+              'credential_values_output': False,
+              'destination_secrets_written': False,
+              'artifact_bytes_downloaded': False
+          }
+          names = ('GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REFRESH_TOKEN')
+          session = None
+          try:
+              if not all(os.environ.get(name) for name in names):
+                  report['status'] = 'MISSING_CENTRAL_CREDENTIALS'
+              else:
+                  credentials = Credentials(
+                      token=None, refresh_token=os.environ['GOOGLE_REFRESH_TOKEN'],
+                      token_uri='https://oauth2.googleapis.com/token',
+                      client_id=os.environ['GOOGLE_CLIENT_ID'],
+                      client_secret=os.environ['GOOGLE_CLIENT_SECRET'],
+                      scopes=['https://www.googleapis.com/auth/drive'])
+                  credentials.refresh(Request())
+                  report['oauth_refresh'] = 'PASS'
+                  session = AuthorizedSession(credentials)
+                  response = session.get(
+                      'https://www.googleapis.com/drive/v3/files/17oA5t4cQBTt1GsHfVTKHBHDwgKDsjI3j',
+                      params={'fields':'id,size,parents,trashed,capabilities/canDownload',
+                              'supportsAllDrives':'true'}, timeout=30)
+                  report['drive_http_status'] = response.status_code
+                  if response.status_code == 200:
+                      item = response.json()
+                      valid = (
+                          item.get('id') == report['source_file_id']
+                          and int(item.get('size', -1)) == report['expected_size']
+                          and not item.get('trashed')
+                          and item.get('capabilities', {}).get('canDownload', False)
+                          and '18d5b3MM9D1BcOeX7NOBi2OBwUB0xXhcS' in item.get('parents', []))
+                      report['status'] = 'CENTRAL_SOURCE_READY' if valid else 'SOURCE_GATE_FAILED'
+                  else:
+                      report['status'] = 'CENTRAL_DRIVE_ACCESS_FAILED'
+          except RefreshError as error:
+              payload = next((arg for arg in error.args if isinstance(arg, dict)), {})
+              code = payload.get('error')
+              report['status'] = 'OAUTH_REFRESH_' + code.upper() if code in {
+                  'invalid_grant','invalid_client','unauthorized_client','invalid_scope'
+              } else 'OAUTH_REFRESH_ERROR'
+          except Exception:
+              report['status'] = 'PROVIDER_OR_RUNTIME_ERROR'
+          finally:
+              if session is not None:
+                  session.close()
+          print('OPL_SOURCE_PREFLIGHT', json.dumps(report, sort_keys=True))
+          sys.exit(0 if report.get('status') == 'CENTRAL_SOURCE_READY' else 1)
+          PY
